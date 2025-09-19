@@ -275,65 +275,68 @@
             background: var(--black);
         }
         
-        .portfolio-grid {
+        .youtube-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 2rem;
             margin-top: 4rem;
         }
         
-        .portfolio-item {
+        .youtube-item {
             position: relative;
-            height: 250px;
             border-radius: 15px;
             overflow: hidden;
-            cursor: pointer;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 195, 0, 0.2);
             transition: all 0.3s ease;
+            padding: 1rem;
         }
         
-        .portfolio-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
+        .youtube-item:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 195, 0, 0.1);
+            border-color: var(--gold);
+            box-shadow: 0 20px 40px rgba(255, 195, 0, 0.2);
+        }
+        
+        .youtube-iframe {
             width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, var(--blue), var(--dark-blue));
-            transition: all 0.3s ease;
+            height: 200px;
+            border: none;
+            border-radius: 10px;
+            margin-bottom: 1rem;
         }
         
-        .portfolio-item:hover {
-            transform: scale(1.05);
+        .video-info {
+            padding: 0.5rem 0;
         }
         
-        .portfolio-item:hover::before {
-            opacity: 0.8;
-        }
-        
-        .portfolio-content {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 2rem;
-            background: linear-gradient(transparent, rgba(0, 8, 20, 0.9));
-            transform: translateY(100%);
-            transition: all 0.3s ease;
-        }
-        
-        .portfolio-item:hover .portfolio-content {
-            transform: translateY(0);
-        }
-        
-        .portfolio-title {
+        .video-title {
             color: var(--gold);
-            font-size: 1.3rem;
+            font-size: 1.1rem;
+            font-weight: bold;
             margin-bottom: 0.5rem;
         }
         
-        .portfolio-category {
+        .video-description {
             color: rgba(255, 255, 255, 0.7);
             font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .loading-message {
+            text-align: center;
+            color: var(--gold);
+            font-size: 1.2rem;
+            padding: 2rem;
+        }
+        
+        .error-message {
+            text-align: center;
+            color: #ff6b6b;
+            font-size: 1.1rem;
+            padding: 2rem;
         }
         
         /* Testimonial Section */
@@ -427,6 +430,15 @@
             }
         }
         
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             .hero-title {
@@ -441,12 +453,16 @@
                 grid-template-columns: 1fr;
             }
             
-            .portfolio-grid {
+            .youtube-grid {
                 grid-template-columns: 1fr;
             }
             
             .section-title {
                 font-size: 2rem;
+            }
+            
+            .youtube-iframe {
+                height: 180px;
             }
         }
         
@@ -541,44 +557,13 @@
     <section class="portfolio" id="portfolio">
         <div class="container">
             <h2 class="section-title reveal">Featured Work</h2>
-            <div class="portfolio-grid">
-                <div class="portfolio-item reveal">
-                    <div class="portfolio-content">
-                        <h3 class="portfolio-title">Brand Commercial</h3>
-                        <p class="portfolio-category">Commercial Video</p>
-                    </div>
-                </div>
-                <div class="portfolio-item reveal">
-                    <div class="portfolio-content">
-                        <h3 class="portfolio-title">Music Video</h3>
-                        <p class="portfolio-category">Music Production</p>
-                    </div>
-                </div>
-                <div class="portfolio-item reveal">
-                    <div class="portfolio-content">
-                        <h3 class="portfolio-title">Documentary Series</h3>
-                        <p class="portfolio-category">Documentary</p>
-                    </div>
-                </div>
-                <div class="portfolio-item reveal">
-                    <div class="portfolio-content">
-                        <h3 class="portfolio-title">Motion Graphics</h3>
-                        <p class="portfolio-category">Animation</p>
-                    </div>
-                </div>
-                <div class="portfolio-item reveal">
-                    <div class="portfolio-content">
-                        <h3 class="portfolio-title">Social Campaign</h3>
-                        <p class="portfolio-category">Social Media</p>
-                    </div>
-                </div>
-                <div class="portfolio-item reveal">
-                    <div class="portfolio-content">
-                        <h3 class="portfolio-title">Corporate Presentation</h3>
-                        <p class="portfolio-category">Corporate</p>
-                    </div>
-                </div>
+            <div id="loading" class="loading-message">
+                <div style="animation: pulse 1.5s infinite;">Loading videos...</div>
             </div>
+            <div id="error" class="error-message" style="display: none;">
+                Unable to load videos. Please check your connection or try again later.
+            </div>
+            <div id="youtube-videos" class="youtube-grid"></div>
         </div>
     </section>
 
@@ -610,6 +595,87 @@
     </footer>
 
     <script>
+        // Replace with your published Google Sheets CSV link
+        const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTyd5Qa8oOx9jmNGidQ2hx32UVa2v4KyWZ_ddUjDX4sf9i5QHS06VnwqlBCHh28yjYk5phwSOq2Ff8f/pub?output=csv";
+        
+        async function loadYouTubeVideos() {
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const videosContainer = document.getElementById('youtube-videos');
+            
+            try {
+                const response = await fetch(sheetUrl);
+                const data = await response.text();
+                
+                // Split CSV into rows and filter out empty rows
+                const rows = data.split('\n')
+                    .map(row => row.trim())
+                    .filter(row => row && row.includes('youtube') || row.includes('youtu.be'));
+                
+                loadingElement.style.display = 'none';
+                
+                if (rows.length === 0) {
+                    errorElement.textContent = 'No YouTube videos found in the sheet.';
+                    errorElement.style.display = 'block';
+                    return;
+                }
+                
+                rows.forEach((row, index) => {
+                    // Parse CSV row (assuming format: URL, Title, Description)
+                    const columns = row.split(',').map(col => col.replace(/"/g, '').trim());
+                    const url = columns[0];
+                    const title = columns[1] || `Video ${index + 1}`;
+                    const description = columns[2] || 'Featured video content';
+                    
+                    // Extract video ID from YouTube URL
+                    const match = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+                    if (match) {
+                        const videoId = match[1];
+                        
+                        // Create video item container
+                        const videoItem = document.createElement('div');
+                        videoItem.className = 'youtube-item reveal';
+                        
+                        // Create iframe
+                        const iframe = document.createElement('iframe');
+                        iframe.className = 'youtube-iframe';
+                        iframe.src = `https://www.youtube.com/embed/${videoId}`;
+                        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                        iframe.allowFullscreen = true;
+                        
+                        // Create video info
+                        const videoInfo = document.createElement('div');
+                        videoInfo.className = 'video-info';
+                        
+                        const videoTitle = document.createElement('div');
+                        videoTitle.className = 'video-title';
+                        videoTitle.textContent = title;
+                        
+                        const videoDesc = document.createElement('div');
+                        videoDesc.className = 'video-description';
+                        videoDesc.textContent = description;
+                        
+                        // Assemble the video item
+                        videoInfo.appendChild(videoTitle);
+                        videoInfo.appendChild(videoDesc);
+                        videoItem.appendChild(iframe);
+                        videoItem.appendChild(videoInfo);
+                        videosContainer.appendChild(videoItem);
+                    }
+                });
+                
+                // Trigger reveal animation for newly added elements
+                setTimeout(() => {
+                    revealOnScroll();
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error loading videos:', error);
+                loadingElement.style.display = 'none';
+                errorElement.style.display = 'block';
+            }
+        }
+
         // Navbar scroll effect
         window.addEventListener('scroll', () => {
             const navbar = document.getElementById('navbar');
@@ -635,8 +701,8 @@
         });
 
         // Scroll reveal animation
-        const revealElements = document.querySelectorAll('.reveal');
         const revealOnScroll = () => {
+            const revealElements = document.querySelectorAll('.reveal');
             revealElements.forEach(element => {
                 const elementTop = element.getBoundingClientRect().top;
                 const windowHeight = window.innerHeight;
@@ -661,29 +727,6 @@
                 card.style.transform = 'translateY(0) scale(1)';
             });
         });
-
-        // Portfolio items interactive effect
-        const portfolioItems = document.querySelectorAll('.portfolio-item');
-        portfolioItems.forEach(item => {
-            item.addEventListener('click', () => {
-                // Add a subtle shake animation on click
-                item.style.animation = 'none';
-                setTimeout(() => {
-                    item.style.animation = 'shake 0.5s ease-in-out';
-                }, 10);
-            });
-        });
-
-        // Add shake animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes shake {
-                0%, 100% { transform: scale(1.05) translateX(0); }
-                25% { transform: scale(1.05) translateX(-2px); }
-                75% { transform: scale(1.05) translateX(2px); }
-            }
-        `;
-        document.head.appendChild(style);
 
         // Parallax effect for floating elements
         window.addEventListener('scroll', () => {
@@ -712,6 +755,9 @@
         
         // Start typing effect after a short delay
         setTimeout(typeWriter, 500);
+        
+        // Load YouTube videos when page loads
+        window.addEventListener('DOMContentLoaded', loadYouTubeVideos);
     </script>
 </body>
 </html>

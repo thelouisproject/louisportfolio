@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Video Embed from Google Sheets</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+    .video-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    iframe {
+      width: 320px;
+      height: 180px;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <h1>YouTube Videos from Google Sheets</h1>
+  <div id="videos" class="video-container"></div>
+
+  <script>
+    // Replace with your published Google Sheets CSV link
+    const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTyd5Qa8oOx9jmNGidQ2hx32UVa2v4KyWZ_ddUjDX4sf9i5QHS06VnwqlBCHh28yjYk5phwSOq2Ff8f/pub?output=csv";
+
+    async function loadVideos() {
+      try {
+        const response = await fetch(sheetUrl);
+        const data = await response.text();
+
+        // Split CSV into rows (assuming each row has a YouTube URL)
+        const rows = data.split("\n").map(r => r.trim()).filter(r => r);
+
+        const container = document.getElementById("videos");
+
+        rows.forEach(row => {
+          // Extract video ID from YouTube URL
+          const match = row.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+          if (match) {
+            const videoId = match[1];
+            const iframe = document.createElement("iframe");
+            iframe.src = `https://www.youtube.com/embed/${videoId}`;
+            iframe.allow =
+              "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+            iframe.allowFullscreen = true;
+            container.appendChild(iframe);
+          }
+        });
+      } catch (err) {
+        console.error("Error loading sheet:", err);
+      }
+    }
+
+    loadVideos();
+  </script>
+</body>
+</html>
